@@ -40,6 +40,8 @@
 
 #define POWER_SUPPLY_SUBSYSTEM "power_supply"
 #define POWER_SUPPLY_SYSFS_PATH "/sys/class/" POWER_SUPPLY_SUBSYSTEM
+#define SYSFS_BATTERY_CURRENT "/sys/class/power_supply/battery/current_now"
+#define SYSFS_BATTERY_VOLTAGE "/sys/class/power_supply/battery/voltage_now"
 #define FAKE_BATTERY_CAPACITY 42
 #define FAKE_BATTERY_TEMPERATURE 424
 #define ALWAYS_PLUGGED_CAPACITY 100
@@ -150,12 +152,14 @@ BatteryMonitor::PowerSupplyType BatteryMonitor::readPowerSupplyType(const String
             { "USB", ANDROID_POWER_SUPPLY_TYPE_USB },
             { "USB_DCP", ANDROID_POWER_SUPPLY_TYPE_AC },
             { "USB_HVDCP", ANDROID_POWER_SUPPLY_TYPE_AC },
+            { "USB_HVDCP_3", ANDROID_POWER_SUPPLY_TYPE_AC },
             { "USB_CDP", ANDROID_POWER_SUPPLY_TYPE_AC },
             { "USB_ACA", ANDROID_POWER_SUPPLY_TYPE_AC },
             { "USB_C", ANDROID_POWER_SUPPLY_TYPE_AC },
             { "USB_PD", ANDROID_POWER_SUPPLY_TYPE_AC },
             { "USB_PD_DRP", ANDROID_POWER_SUPPLY_TYPE_USB },
             { "Wireless", ANDROID_POWER_SUPPLY_TYPE_WIRELESS },
+            { "DASH", ANDROID_POWER_SUPPLY_TYPE_AC },
             { NULL, 0 },
     };
 
@@ -268,19 +272,13 @@ bool BatteryMonitor::update(void) {
                 KLOG_WARNING(LOG_TAG, "%s: Unknown power supply type\n",
                              mChargerNames[i].string());
             }
-            path.clear();
-            path.appendFormat("%s/%s/current_max", POWER_SUPPLY_SYSFS_PATH,
-                              mChargerNames[i].string());
+            
             int ChargingCurrent =
-                    (access(path.string(), R_OK) == 0) ? getIntField(path) : 0;
-
-            path.clear();
-            path.appendFormat("%s/%s/voltage_max", POWER_SUPPLY_SYSFS_PATH,
-                              mChargerNames[i].string());
+                  (access(SYSFS_BATTERY_CURRENT, R_OK) == 0) ? abs(getIntField(String8(SYSFS_BATTERY_CURRENT))) : 0;
 
             int ChargingVoltage =
-                (access(path.string(), R_OK) == 0) ? getIntField(path) :
-                DEFAULT_VBUS_VOLTAGE;
+                   (access(SYSFS_BATTERY_VOLTAGE, R_OK) == 0) ? getIntField(String8(SYSFS_BATTERY_VOLTAGE)) :
+                    DEFAULT_VBUS_VOLTAGE;
 
             double power = ((double)ChargingCurrent / MILLION) *
                            ((double)ChargingVoltage / MILLION);
